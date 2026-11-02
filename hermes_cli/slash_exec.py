@@ -1,0 +1,164 @@
+"""Registry-owned slash command execution (thin slice).
+
+Invariant: an executor's output depends only on ``ctx.args`` / ``ctx.options`` — never on
+``ctx.surface`` — so the core text is identical across surfaces for a fixed context (enforced by
+tests/hermes_cli/test_commands_execute.py).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
+from typing import Any
+
+from agent.i18n import t
+
+__all__ = [
+    "EXECUTORS",
+    "CommandContext",
+    "CommandReply",
+    "execute_command",
+    "resolve_executor",
+    "run_execute",
+]
+
+
+@dataclass(frozen=True)
+class CommandContext:
+    """Surface-provided inputs for a shared command executor."""
+    surface: str = "cli"                # "cli" | "gateway" | "tui" — decoration only
+    args: str = ""                      # raw argument string after the command word
+    options: Mapping[str, Any] = field(default_factory=dict)  # surface params (page_size, ...)
+    config_get: Callable[[str, Any], Any] | None = None       # optional config accessor
+
+
+@dataclass(frozen=True)
+class CommandReply:
+    """Canonical result of a shared executor: surface-independent ``text`` plus the structured
+    ``data`` it derived so a surface can re-render with its own decoration."""
+    text: str
+    data: Mapping[str, Any] = field(default_factory=dict)
+    format: str = "plain"               # "plain" | "markdown" (hint, not a contract)
+
+
+# Executors — pure formatters, no agent/session mutation.
+def _exec_version(ctx: CommandContext) -> CommandReply:
+    """Core /version text — the banner version label."""
+    from hermes_cli.banner import format_banner_version_label
+    return CommandReply(format_banner_version_label())
+
+
+def _exec_egress(ctx: CommandContext) -> CommandReply:
+    """Core /egress text — Docker egress proxy status."""
+    from hermes_cli.proxy_cli import format_status_text
+    return CommandReply(format_status_text())
+
+
+def _exec_profile(ctx: CommandContext) -> CommandReply:
+    """Core /profile data — active profile name + home directory.
+
+    A multiplexed gateway may pre-resolve the per-source profile/home via ``options``
+    (``profile_name`` / ``home_display``); otherwise process-level values are used.
+    """
+    from hermes_cli.profiles import get_active_profile_name
+    from hermes_constants import display_hermes_home
+    profile_name = str(ctx.options.get("profile_name") or "").strip() or get_active_profile_name()
+    home_display = str(ctx.options.get("home_display") or "").strip() or display_hermes_home()
+    # Presentation-only display name (profile.yaml); `data.profile` stays the canonical id.
+    label = profile_name
+    try:
+        from hermes_cli.profiles import format_profile_label, get_profile_dir, read_profile_meta
+        display = read_profile_meta(get_profile_dir(profile_name)).get("display_name", "")
+        label = format_profile_label(profile_name, display)
+    except Exception:
+        pass
+    return CommandReply(t("gateway.profile.plain", profile=label, home=home_display),
+                        data={"profile": profile_name, "home": home_display})
+
+
+def _exec_autoprune(ctx: CommandContext) -> CommandReply:
+    """Core /autoprune text — record the auto-prune decision or show its state."""
+    from hermes_cli.prune_advisor import run_command
+    return CommandReply(run_command(ctx.args))
+
+
+def _exec_bundles(ctx: CommandContext) -> CommandReply:
+    """Core /bundles data — installed skill bundles listing."""
+    try:
+        from agent.skill_bundles import _bundles_dir, list_bundles
+    except Exception as exc:  # pragma: no cover - env-specific
+        return CommandReply(t("gateway.bundles.unavailable", error=exc), data={"error": str(exc)})
+    bundles = list_bundles()
+    bundles_dir = str(_bundles_dir())
+    if not bundles:
+        return CommandReply(t("gateway.bundles.none_plain", dir=bundles_dir), data={"bundles": [], "dir": bundles_dir})
+    lines = [t("gateway.bundles.header_plain", count=len(bundles))]
+    for info in bundles:
+        skills = info.get("skills", [])
+        desc = info.get("description") or t("gateway.bundles.default_desc", count=len(skills))
+        lines.append(t("gateway.bundles.item_plain", slug=info["slug"], desc=desc, count=len(skills)))
+        lines.extend(f"    · {s}" for s in skills)
+    lines.append(t("gateway.bundles.invoke_hint_plain"))
+    return CommandReply("\n".join(lines), data={"bundles": bundles, "dir": bundles_dir})
+
+
+def _skill_commands() -> dict:
+    """Registered skill commands, or ``{}`` when the skill subsystem is unavailable."""
+    try:
+        from agent.skill_commands import get_skill_commands
+        return get_skill_commands() or {}
+    except Exception:
+        return {}
+
+
+def _exec_help(ctx: CommandContext) -> CommandReply:
+    """Core gateway /help body (pre platform mention decoration)."""
+    from hermes_cli.commands import gateway_help_lines
+    # ``allowed_commands`` (gateway, non-admin caller): only the commands the slash-access
+    # policy lets this user run; skill commands are hidden too since the gate refuses them.
+    allowed = ctx.options.get("allowed_commands")
+    lines = [t("gateway.help.header"), *gateway_help_lines(allowed)]
+    skill_cmds = _skill_commands() if allowed is None else {}
+    try:
+        if skill_cmds:
+            lines.append(t("gateway.help.skill_header", count=len(skill_cmds)))
+            sorted_cmds = sorted(skill_cmds)
+            skills_only = (ctx.args or "").strip().casefold() == "skills"
+            visible_cmds = sorted_cmds if skills_only else sorted_cmds[:10]
+            lines.extend(f"`{cmd}` — {skill_cmds[cmd]['description']}"
+                         for cmd in visible_cmds)
+            if not skills_only and len(sorted_cmds) > 10:
+                lines.append(t("gateway.help.more_use_skills", count=len(sorted_cmds) - 10))
+    except Exception:
+        pass
+    return CommandReply("\n".join(lines), format="markdown")
+
+
+EXECUTORS: dict[str, Callable[[CommandContext], CommandReply]] = {
+    "version": _exec_version,
+    "egress": _exec_egress,
+    "profile": _exec_profile,
+    "bundles": _exec_bundles,
+    "autoprune": _exec_autoprune,
+    "gateway_help": _exec_help}
+
+
+def resolve_executor(cmd_def: Any) -> Callable[[CommandContext], CommandReply] | None:
+    """Return the shared executor for ``cmd_def`` (or None when not migrated)."""
+    return EXECUTORS.get(getattr(cmd_def, "execute", None) or "")
+
+
+def run_execute(cmd_def: Any, ctx: CommandContext) -> CommandReply | None:
+    """Run ``cmd_def``'s registry-owned executor, if any."""
+    fn = resolve_executor(cmd_def)
+    return None if fn is None else fn(ctx)
+
+
+def execute_command(name: str, ctx: CommandContext) -> CommandReply:
+    """Run the shared executor for ``name``; ``LookupError`` when unknown or not migrated."""
+    from hermes_cli.commands import resolve_command
+    cmd_def = resolve_command(name)
+    reply = run_execute(cmd_def, ctx) if cmd_def is not None else None
+    if reply is None:
+        raise LookupError(f"no registry-owned executor for /{name}")
+    return reply

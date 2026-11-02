@@ -1,0 +1,52 @@
+name: telegram-platform
+label: Telegram
+kind: platform
+version: 1.0.0
+description: >
+  Telegram gateway adapter for Hermes Agent using Telethon over MTProto.
+  Relays Telegram chat, group, and forum-topic messages using a profile-scoped
+  persistent session. Supports text, media, native MTProto Rich Messages with
+  Markdown/HTML formatting entities, colored callback buttons for interactive
+  help, GuestBot and per-chat settings; separate group and direct-message access
+  lists; owner-confirmed grants; safe allow-all group access; trigger-name,
+  mention, and direct invocation modes; Guest Mode AI replies, typing indicators,
+  reactions, and HTTP/SOCKS proxies. Bot API polling, webhooks, arbitrary inline
+  pickers, and Bot API callback workflows are not part of this transport.
+author: NousResearch
+requires_env:
+  - name: TELEGRAM_API_ID
+    description: "Telegram application API ID from my.telegram.org"
+    prompt: "Telegram API ID"
+    url: "https://my.telegram.org/apps"
+    password: false
+  - name: TELEGRAM_API_HASH
+    description: "Telegram application API hash from my.telegram.org"
+    prompt: "Telegram API hash"
+    url: "https://my.telegram.org/apps"
+    password: true
+  - name: TELEGRAM_BOT_TOKEN
+    description: "Telegram bot token from @BotFather"
+    prompt: "Telegram bot token"
+    url: "https://t.me/BotFather"
+    password: true
+optional_env:
+  - name: TELEGRAM_ALLOWED_USERS
+    description: "Comma-separated Telegram user IDs allowed to talk to the bot"
+    prompt: "Allowed users (comma-separated)"
+    password: false
+  - name: TELEGRAM_ALLOW_ALL_USERS
+    description: "Allow any Telegram user to trigger the bot (dev only)"
+    prompt: "Allow all users? (true/false)"
+    password: false
+  - name: TELEGRAM_HOME_CHANNEL
+    description: "Default chat ID for cron / notification delivery"
+    prompt: "Home channel ID"
+    password: false
+  - name: TELEGRAM_HOME_CHANNEL_NAME
+    description: "Display name for the Telegram home channel"
+    prompt: "Home channel display name"
+    password: false
+  - name: TELEGRAM_GUEST_MODE
+    description: "Enable Telegram Guest Mode processing (enabled by default; user/chat allowlists still apply)"
+    prompt: "Enable GuestBot? (true/false)"
+    password: false
