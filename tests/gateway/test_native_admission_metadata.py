@@ -1,0 +1,263 @@
+"""Native admission keeps main's inbound contract: real adapter events run a turn (N78-N80)."""
+import ast
+from dataclasses import replace
+from pathlib import Path
+
+import pytest
+
+from gateway.config import GatewayConfig, Platform, PlatformConfig
+from gateway.platforms.base import SendResult
+from gateway.platforms.event import MessageEvent
+from gateway.run import GatewayRunner
+from gateway.session_authority import initialize_session_authority
+from gateway.session_envelope import restore_native, snapshot_native
+from gateway.session_results import execution_result
+from hermes_state_runtime import RuntimeStoreError
+from tests.waiting import async_wait_until
+
+REPO = Path(__file__).resolve().parents[2]
+CHAT = '15551234567@s.whatsapp.net'
+VCARD = 'BEGIN:VCARD\nPHOTO;BASE64:' + 'A' * 20000 + '\nEND:VCARD'
+# (bridge payload overrides, expected turn text, expected restored metadata)
+BRIDGE_SHAPES = [
+    ({'body': 'hello', 'nativeType': 'conversation'}, 'hello', {'whatsapp_native_type': 'conversation'}),
+    ({'body': 'quoted', 'nativeType': 'extendedTextMessage'}, 'quoted',
+     {'whatsapp_native_type': 'extendedTextMessage'}),
+    ({'body': '/tmp/report.csv is broken', 'nativeType': 'conversation'}, '/tmp/report.csv is broken',
+     {'whatsapp_native_type': 'conversation'}),
+    ({'body': '📍 here', 'mediaType': 'location', 'nativeType': 'locationMessage',
+      'nativeMetadata': {'location': {'latitude': 1.5, 'longitude': 2.5, 'live': False}}}, '📍 here',
+     {'whatsapp_native_type': 'locationMessage',
+      'whatsapp_native': {'location': {'latitude': 1.5, 'longitude': 2.5, 'live': False}}}),
+    ({'body': '👍', 'mediaType': 'reaction', 'nativeType': 'reactionMessage',
+      'nativeMetadata': {'reaction': {'text': '👍', 'messageId': 'x', 'remoteJid': '1', 'participant': ''}}}, '👍',
+     {'whatsapp_native_type': 'reactionMessage',
+      'whatsapp_native': {'reaction': {'text': '👍', 'messageId': 'x', 'remoteJid': '1', 'participant': ''}}}),
+    ({'body': 'Poll: lunch?', 'mediaType': 'poll', 'nativeType': 'pollCreationMessage',
+      'nativeMetadata': {'poll': {'question': 'lunch?', 'options': ['a', 'b'], 'selectableCount': 1}}},
+     'Poll: lunch?', {'whatsapp_native_type': 'pollCreationMessage',
+                      'whatsapp_native': {'poll': {'question': 'lunch?', 'options': ['a', 'b'],
+                                                   'selectableCount': 1}}}),
+    # A vCard with a photo exceeds the bound: the bulky native block is dropped, the turn still runs.
+    ({'body': 'Contact: Ann', 'mediaType': 'contact', 'nativeType': 'contactMessage',
+      'nativeMetadata': {'contact': {'displayName': 'Ann', 'vcard': VCARD}}}, 'Contact: Ann',
+     {'whatsapp_native_type': 'contactMessage'}),
+    # WHATSAPP_FORWARD_OWNER_MESSAGES owner forward: main runs it as a turn, so does the owner.
+    ({'body': 'owner typed', 'nativeType': 'conversation', 'fromOwner': True}, '[owner reply] owner typed',
+     {'whatsapp_native_type': 'conversation', 'whatsapp_from_owner': True}),
+]
+
+
+@pytest.mark.asyncio
+async def test_real_whatsapp_bridge_events_run_a_turn_through_native_admission(tmp_path, monkeypatch):
+    from plugins.platforms.whatsapp.adapter import WhatsAppAdapter
+    monkeypatch.setenv('WHATSAPP_ALLOWED_USERS', '15551234567')
+    runner = GatewayRunner(GatewayConfig(sessions_dir=tmp_path / 'sessions'))
+    adapter = WhatsAppAdapter(PlatformConfig(enabled=True, extra={
+        'text_batch_delay_seconds': 0, 'session_path': str(tmp_path / 'wa')}))
+    adapter.gateway_runner, runner.adapters = runner, {Platform.WHATSAPP: adapter}
+    authority = await initialize_session_authority(runner, profile_id='default', instance_id='wa')
+    runner._wire_adapter_handlers(adapter)
+    sent, turns = [], []
+
+    async def send(chat_id, content, **_):
+        sent.append(content)
+        return SendResult(success=True, message_id='s')
+
+    async def turn(event, *_args, **_kwargs):
+        turns.append((event.text, event.metadata))
+        execution_result.get()['result'] = {'final_response': 'ok', 'messages': []}
+        return 'ok'
+
+    monkeypatch.setattr(adapter, 'send', send)
+    monkeypatch.setattr(runner, '_handle_message_with_agent', turn)
+    try:
+        for index, (shape, text, metadata) in enumerate(BRIDGE_SHAPES):
+            event = await adapter._build_message_event(
+                {'messageId': f'm{index}', 'chatId': CHAT, 'senderId': CHAT, **shape})
+            adapter._enqueue_text_event(event)
+            await async_wait_until(lambda: len(sent) > index and not adapter._background_tasks,
+                                   timeout=20, what=f'reply to {shape["nativeType"]}')
+            assert sent[index] == 'ok', sent
+            assert turns[index] == (text, metadata), turns
+    finally:
+        authority.db.close()
+
+
+@pytest.mark.asyncio
+async def test_native_codec_closed_metadata_contract_and_reply_expected(tmp_path, monkeypatch):
+    from plugins.platforms.whatsapp.adapter import WhatsAppAdapter
+    monkeypatch.setenv('WHATSAPP_ALLOWED_USERS', '15551234567')
+    runner = GatewayRunner(GatewayConfig(sessions_dir=tmp_path / 'sessions'))
+    adapter = WhatsAppAdapter(PlatformConfig(enabled=True, extra={'session_path': str(tmp_path / 'wa')}))
+    runner.adapters = {Platform.WHATSAPP: adapter}
+    authority = await initialize_session_authority(runner, profile_id='default', instance_id='codec')
+    try:
+        event = MessageEvent(text='chatter', source=adapter.build_source(chat_id=CHAT, user_id=CHAT, chat_type='group'),
+                             message_id='c1')
+        # Slack-style silence policy survives the envelope (N80); unknown stays absent (old digest).
+        assert 'reply_expected' not in snapshot_native(runner, event)['native_text_v1']['event']
+        for value in (False, True):
+            assert restore_native(snapshot_native(runner, replace(event, reply_expected=value))).reply_expected is value
+        refused = [{'whatsapp_native_type': 'x', 'internal': True}, {'gateway_session_id': 's'},
+                   {'_authorization_profile_home': '/x'}, {'arbitrary': 1}, {'whatsapp_native_type': 'x' * 65},
+                   {'whatsapp_native': {'gateway_session_id': 's'}}, {'whatsapp_from_owner': 'yes'},
+                   {'whatsapp_native': {'poll': {1, 2}}}]
+        for metadata in refused:
+            with pytest.raises(RuntimeStoreError, match='invalid_params'):
+                snapshot_native(runner, replace(event, metadata=metadata))
+        for bad in (replace(event, reply_expected='no'), replace(event, text='/new now')):
+            with pytest.raises(RuntimeStoreError, match='invalid_params'):
+                snapshot_native(runner, bad)
+        # MSG-2: an adapter's absent media list (None) is no media at the envelope boundary, with the
+        # same fingerprint as []; any other non-list still refuses.
+        for name in ('media_urls', 'media_types', 'media_text_inlined'):
+            assert snapshot_native(runner, replace(event, **{name: None})) == snapshot_native(runner, event)
+            for bad in ('x', ('x',)):
+                with pytest.raises(RuntimeStoreError, match='invalid_params'):
+                    snapshot_native(runner, replace(event, **{name: bad}))
+    finally:
+        authority.db.close()
+    # Closed producer matrix: no other adapter stamps MessageEvent.metadata on ordinary inbound,
+    # so the WhatsApp keys above are the whole contract. A new producer must extend it here.
+    # Fork: the MTProto Telegram UI flows stamp metadata too (thread routing, guest-query and
+    # deep-research/task reply-chain markers, model-UI state) — all fork-only producers.
+    producers = set()
+    for path in [*REPO.glob('gateway/platforms/**/*.py'), *REPO.glob('plugins/platforms/**/*.py')]:
+        for node in ast.walk(ast.parse(path.read_text(encoding='utf-8'))):
+            if (isinstance(node, ast.Call) and getattr(node.func, 'id', getattr(node.func, 'attr', '')) == 'MessageEvent'
+                    and any(k.arg == 'metadata' for k in node.keywords)):
+                producers.add(path.relative_to(REPO).as_posix())
+    assert producers == {
+        'plugins/platforms/whatsapp/adapter.py',
+        'plugins/platforms/telegram/control_center.py',
+        'plugins/platforms/telegram/deep_research_ui.py',
+        'plugins/platforms/telegram/telethon_adapter.py',
+        'plugins/platforms/telegram/telegram_management.py',
+        'plugins/platforms/telegram/model_settings_ui.py',
+    }, producers
+
+
+def _deepresearch_event(*, metadata: dict) -> MessageEvent:
+    """The synthetic research-turn event ``deep_research_ui._launch_session`` dispatches."""
+    from tests.gateway.test_telegram_topic_mode import _make_source
+
+    return MessageEvent(
+        text='Conduct deep research on: why India lacks new innovations',
+        source=_make_source(thread_id='777'), message_id='4796', metadata=metadata)
+
+
+def _deepresearch_metadata() -> dict:
+    return {
+        'deep_research': {
+            'session_id': 'dd0682cbf7e3', 'max_turns': 150, 'report_format': 'md',
+            'depth': 'deep', 'shell_access': True, 'compaction_allowed': True,
+            'tools_allowed': True, 'mcps_allowed': True, 'custom_instructions': '',
+            'latest_reply_message_id': '4796', 'topic_welcome_message_id': '4796',
+            'checkpoint': {'phase': 'starting', 'todos': [], 'last_error': ''},
+            'progress_message_id': None, 'resumed': False,
+        },
+        'thread_id': '777',
+        'telegram_task_reply_chain': True,
+        'telegram_task_reply_to_message_id': '4796',
+        'gateway_session_key': 'agent:main:telegram:dm:208214988:777',
+    }
+
+
+@pytest.mark.asyncio
+async def test_telegram_deepresearch_routing_metadata_passes_admission(tmp_path, monkeypatch):
+    """The deep-research turn event (locally built, never wire data) is admitted: its small
+    routing keys survive the envelope, the large ``deep_research`` payload does not — the turn
+    rehydrates it from the durable session record instead."""
+    from tests.gateway.test_telegram_topic_mode import _make_runner
+
+    runner = _make_runner()
+    runner._is_user_authorized = lambda _source, **_kwargs: True
+    event = _deepresearch_event(metadata=_deepresearch_metadata())
+    payload = snapshot_native(runner, event)
+    projected = payload['native_text_v1']['event']['metadata']
+    assert projected == {
+        'thread_id': '777',
+        'gateway_session_key': 'agent:main:telegram:dm:208214988:777',
+        'telegram_task_reply_chain': True,
+        'telegram_task_reply_to_message_id': '4796',
+    }, projected
+    assert 'deep_research' not in projected
+    restored = restore_native(payload, runner)
+    assert restored.metadata['gateway_session_key'] == 'agent:main:telegram:dm:208214988:777'
+    assert 'deep_research' not in restored.metadata
+    assert restored.text.startswith('Conduct deep research on:')
+
+
+@pytest.mark.asyncio
+async def test_telegram_unknown_metadata_key_still_refused(tmp_path, monkeypatch):
+    """Fail-closed: a Telegram event carrying any key outside the routing allowlist is refused,
+    and the WhatsApp contract is unchanged (a Telegram routing key on WhatsApp still refuses)."""
+    from tests.gateway.test_telegram_topic_mode import _make_runner
+
+    runner = _make_runner()
+    runner._is_user_authorized = lambda _source, **_kwargs: True
+    with pytest.raises(RuntimeStoreError, match='invalid_params'):
+        snapshot_native(runner, _deepresearch_event(
+            metadata={**_deepresearch_metadata(), 'arbitrary': 1}))
+    with pytest.raises(RuntimeStoreError, match='invalid_params'):
+        snapshot_native(runner, _deepresearch_event(metadata={'thread_id': '777', 'gateway_session_id': 's'}))
+    from plugins.platforms.whatsapp.adapter import WhatsAppAdapter
+    monkeypatch.setenv('WHATSAPP_ALLOWED_USERS', '15551234567')
+    wa_adapter = WhatsAppAdapter(PlatformConfig(enabled=True, extra={'session_path': str(tmp_path / 'wa')}))
+    wa_event = MessageEvent(
+        text='chatter', source=wa_adapter.build_source(chat_id=CHAT, user_id=CHAT, chat_type='group'),
+        message_id='c1',
+        metadata={'whatsapp_native_type': 'conversation', 'thread_id': '777'})
+    with pytest.raises(RuntimeStoreError, match='invalid_params'):
+        snapshot_native(runner, wa_event)
+
+
+@pytest.mark.asyncio
+async def test_telegram_guest_query_event_passes_admission(tmp_path, monkeypatch):
+    """A Telegram Guest Mode request is admitted: the guest-query event the adapter builds
+    carries only Telegram routing metadata, so native admission accepts it instead of
+    refusing it as ``invalid_params`` (``metadata``)."""
+    from types import SimpleNamespace
+
+    from telethon import types as tl_types
+
+    from plugins.platforms.telegram.telethon_adapter import TelethonAdapter
+    from tests.gateway.test_telegram_topic_mode import _make_runner
+
+    adapter = TelethonAdapter(PlatformConfig(extra={}))
+    adapter._authorized = lambda _source: True
+    handled = []
+
+    async def handle(event):
+        handled.append(event)
+        return "Hello guest"
+
+    class Client:
+        async def __call__(self, request):
+            return SimpleNamespace()
+
+    adapter._client = Client()
+    adapter._message_handler = handle
+    message = SimpleNamespace(
+        peer_id=tl_types.PeerChat(chat_id=88), from_id=tl_types.PeerUser(user_id=77),
+        id=500, message="Can you help?", reply_to=None, reply_to_msg_id=None,
+    )
+    reference = SimpleNamespace(message="Earlier context", from_id=tl_types.PeerUser(user_id=77))
+    await adapter._on_guest_chat_query(
+        SimpleNamespace(query_id=1234, message=message, reference_messages=[reference]))
+
+    assert len(handled) == 1
+    event = handled[0]
+    assert event.source.thread_id == "guest-77"
+    # The guest context already rides on the source thread and the prompt payload;
+    # only the closed Telegram routing contract may ride on the event metadata.
+    assert event.metadata == {"thread_id": "guest-77"}, event.metadata
+
+    runner = _make_runner()
+    runner._is_user_authorized = lambda _source, **_kwargs: True
+    payload = snapshot_native(runner, event)
+    assert payload["native_text_v1"]["event"]["metadata"] == {"thread_id": "guest-77"}
+    restored = restore_native(payload, runner)
+    assert restored.source.thread_id == "guest-77"
+    assert restored.text.startswith("Telegram Guest Mode request.")
