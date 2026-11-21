@@ -1,0 +1,12 @@
+# Application source is fetched from a pinned Git commit; no local data is sent.
+**
+!deploy/
+!deploy/huggingface/
+!deploy/huggingface/start.sh
+!deploy/huggingface/supervisor.py
+!deploy/huggingface/snapshot.py
+!deploy/huggingface/README.space.md
+!deploy/huggingface/check_runtime.py
+!deploy/huggingface/free_policy.py
+!deploy/huggingface/persistence.py
+!deploy/huggingface/full_state.py

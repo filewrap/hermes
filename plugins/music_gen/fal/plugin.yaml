@@ -1,0 +1,7 @@
+name: fal
+version: 1.0.0
+description: "FAL.ai music generation backend. MiniMax Music 2.6, ACE-Step and Stable Audio 2.5 via fal_client's queue API."
+author: NousResearch
+kind: backend
+requires_env:
+  - FAL_KEY

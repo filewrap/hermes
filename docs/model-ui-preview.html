@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model and sampling — offline preview</title><style>
+*{box-sizing:border-box}body{margin:0;background:#141414;color:#f2f2f2;font:16px/1.45 system-ui,sans-serif}
+main{max-width:540px;margin:auto;padding:18px}aside{color:#c4c4c4;font-size:13px;margin-bottom:22px}
+article{background:#222;border-radius:14px;padding:20px;margin-top:24px;overflow-wrap:anywhere}
+h1{font-size:24px;margin:0 0 14px}h2{font-size:20px;margin:22px 0 8px}p{margin:10px 0}
+ul{padding-left:22px;margin:10px 0}hr{border:0;border-top:1px solid #626262;width:70%;margin:22px auto}
+mark{color:inherit;background:#613b4a;padding:1px 4px;border-radius:4px}blockquote{margin:16px 0;padding:10px 12px;border-left:4px solid #d36a9b;background:#382732}
+.keyboard{margin-top:6px}.row{display:flex;gap:5px;margin-bottom:5px}button{flex:1;min-width:0;padding:11px 3px;border:0;border-radius:8px;background:#8e3d66;color:white;font:600 12px system-ui;opacity:1}
+</style></head><body><main><aside>Offline preview from the production RichMessage HTML. Sample values match the reference screenshots, not a live settings read. Buttons are shown for layout only and are disabled. Telegram controls the final native appearance. No message was sent and no setting was changed.</aside>
+<article><h1>Model dashboard</h1>
+
+<p>This conversation's active model and API request settings. One active model is shown.</p>
+
+<hr/>
+
+<h2>Provider</h2><p>Currently <mark>OpenRouter</mark> (configured)</p>
+
+<ul><li>Providers opens the live provider list; List/change opens model selection.</li></ul>
+
+<h2>Model</h2><p>Currently <mark>openrouter/free</mark></p>
+
+<ul><li>Live catalog: 63 models.</li></ul>
+
+<h2>Reasoning effort</h2><p>Currently <mark>provider default</mark></p>
+
+<blockquote>provider reports support; model-specific support is unconfirmed.</blockquote>
+
+<h2>Conversation request settings</h2><p>Currently <mark>temperature=0.1</mark></p>
+
+<ul><li>Model settings changes only this conversation's API requests. Close dismisses these controls.</li></ul>
+
+<hr/>
+
+<p><i>Page 1 of 1 • Total 1</i></p></article><div class="keyboard"><div class="row"><button type="button" disabled>Providers</button><button type="button" disabled>List/change</button></div><div class="row"><button type="button" disabled>Model settings</button></div><div class="row"><button type="button" disabled>Close</button></div></div><article><h1>Model settings — Sampling</h1>
+
+<p>Changes apply only to this conversation's API requests.</p>
+
+<ul><li>Input ranges are UI validation, not guaranteed provider/model limits. The API may reject or ignore unsupported settings.</li></ul>
+
+<hr/>
+
+<h2>Temperature</h2>
+
+<p>Currently <mark>0.1</mark></p>
+
+<ul><li>Input range 0–2. Controls randomness when choosing the next token. Lower values make choices more predictable; higher values make them more varied.</li></ul>
+
+<h2>Top-p</h2>
+
+<p>Currently <mark>provider default</mark></p>
+
+<ul><li>Input range 0–1. Limits choices to the smallest set of tokens whose combined probability reaches this value. Lower values narrow the choices; 1 keeps the full set.</li></ul>
+
+<h2>Frequency penalty</h2>
+
+<p>Currently <mark>provider default</mark></p>
+
+<ul><li>Input range -2–2. Adjusts repetition based on how often a token has already appeared. Positive values discourage frequent repeats; negative values encourage them.</li></ul>
+
+<h2>Presence penalty</h2>
+
+<p>Currently <mark>provider default</mark></p>
+
+<ul><li>Input range -2–2. Adjusts repetition based on whether a token has appeared at all. Positive values encourage new wording or topics; negative values favor reuse.</li></ul>
+
+<hr/>
+
+<p><i>Page 1 of 3 • Total 4</i></p></article><div class="keyboard"><div class="row"><button type="button" disabled>Temperature</button><button type="button" disabled>Enter value</button><button type="button" disabled>−</button><button type="button" disabled>+</button><button type="button" disabled>Reset</button></div><div class="row"><button type="button" disabled>Top-p</button><button type="button" disabled>Enter value</button><button type="button" disabled>−</button><button type="button" disabled>+</button><button type="button" disabled>Reset</button></div><div class="row"><button type="button" disabled>Frequency penalty</button><button type="button" disabled>Enter value</button><button type="button" disabled>−</button><button type="button" disabled>+</button><button type="button" disabled>Reset</button></div><div class="row"><button type="button" disabled>Presence penalty</button><button type="button" disabled>Enter value</button><button type="button" disabled>−</button><button type="button" disabled>+</button><button type="button" disabled>Reset</button></div><div class="row"><button type="button" disabled>1. Sampling</button><button type="button" disabled>2. Output</button><button type="button" disabled>3. Capabilities</button></div><div class="row"><button type="button" disabled>Back</button><button type="button" disabled>Close</button></div></div></main></body></html>

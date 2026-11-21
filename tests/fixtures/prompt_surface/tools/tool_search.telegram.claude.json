@@ -1,0 +1,23 @@
+{
+  "description": "Search 39 additional tools that are loaded on demand. Send one keyword query per capability you need; returns matching tool names and descriptions. Then `tool_describe` loads schemas and `tool_call` invokes. Tools already in your tool list need no search. Searches also cover the user's connected app accounts, whose tools are hosted and so never listed here (results named `connectors__<app>__<tool>`); `manage_connections` checks or connects an account and installs MCP servers.\n\nEvery tool listed below exists: never call it unavailable, and go straight to `tool_describe` when you see the exact name.\n\nDeferred tool catalog (call schemas via `tool_describe`, invoke via `tool_call`):\n- browser_vault: Fill saved logins, 2FA codes, cards and addresses on the CURRENT browser page.\n- browser_exec: Drive a real browser for JS pages, logins, forms and clicks (Browser Use CLI).\n- computer_use: Drive the desktop via cua-driver: screenshots, mouse, keyboard, scroll, drag.\n- manage_connections: Connect the user's app accounts and install MCP servers.\n- cronjob_manage: Schedule recurring or one-off agent tasks (cron jobs): create, list, edit, run.\n- dashboard: Read and arrange this session dashboard.\n- decision_evaluate: Evaluate ONLY the supplied state with a separately configured decision model.\n- gateway: Gateway self-management (owner only).\n- image_generate: Generate or edit images (with reference images) using the configured model.\n- mobile_ui: Control a paired Android app with Accessibility Control enabled (owner only).\n- nodes: Discover, configure, and control paired devices (owner only).\n- plugins: Plugin lifecycle over the Hermes plugin system (owner only).\n- portal: Allocate loopback portal routes for local dev servers (open/list/close).\n- presence: List live people, devices and recent activity on this gateway.\n- providers: Manage Hermes model providers.\n- session_search: Search or read past Hermes conversations (FTS5), or scroll inside one.\n- process_manage: Poll, wait on, send input to, or kill terminal(background=true) processes.\n- transcripts: List, read, transcribe, or store meeting and voice transcripts.\n- text_to_speech: Convert text to speech audio.\n- vision_analyze: Load an image into the conversation so you can see it.\nbrowser-cdp tools (2):\n- browser_cdp: Send a raw Chrome DevTools Protocol (CDP) command.\n- browser_dialog: Accept or dismiss a native JS dialog (alert/confirm/prompt) blocking the page.\nconversations tools (5):\n- conversations_list: List the Telegram conversations this bot account can message.\n- conversations_turn: Send one message to a Telegram conversation by its conv_ ref.\n- dismiss_task: Remove a pending suggestion created by suggest_task.\n- sessions_send: Send a message to an existing session by its session id or subagent run id.\n- suggest_task: Suggest a follow-up task for the owner to approve.\ngithub tools (2):\n- github_identity_status: Inspect the effective GitHub account and credential health.\n- github_publish: Publish a session workspace as a draft GitHub PR.\nsessions tools (4):\n- agents_list: List the agents in this run: the current agent and its live subagents.\n- session_status: Read this session's status: model, usage, label, state, activity.\n- sessions: Read, organise, delete, or group Hermes sessions.\n- sessions_list: List Hermes sessions from the session registry, newest first.\ntelegram_admin tools (4):\n- telegram_allow: Allow or remove a Telegram user, group, or channel, in the owner's words.\n- telegram_chat_admin: Read, search, or list pinned messages, and pin/unpin in this chat only.\n- telegram_client: Operate Telegram through the current conversation's bot identity.\n- telegram_trigger: Change how this Telegram group invokes the bot.\nturn_control tools (2):\n- agents_wait: Wait for subagent runs to settle and collect their results, without polling.\n- sessions_yield: End this turn to await pending child completions, not submit a final result.",
+  "name": "tool_search",
+  "parameters": {
+    "properties": {
+      "limit": {
+        "description": "Max matches per query (default 5).",
+        "type": "integer"
+      },
+      "queries": {
+        "description": "One query per capability: service + action + object keywords (e.g. ['gmail send email', 'github create issue']), never a question; every word must match tool text. Searched in parallel.",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "queries"
+    ],
+    "type": "object"
+  }
+}

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: sans-serif; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); text-align: center; }
+  button { background: var(--tg-theme-button-color, #2481cc); color: var(--tg-theme-button-text-color, #fff); border: 0; border-radius: 8px; padding: 12px 24px; font-size: 16px; }
+</style>
+</head>
+<body>
+<p>Taps: <span id="count">0</span></p>
+<button id="tap">Tap me</button>
+<script>
+  // TelegramWidget SDK: taps send a widget query; the bot edits the shared
+  // state and answers, then the client re-renders with the new count.
+  document.getElementById('tap').addEventListener('click', function () {
+    var el = document.getElementById('count');
+    el.textContent = String(Number(el.textContent) + 1);
+  });
+</script>
+</body>
+</html>
