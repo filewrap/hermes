@@ -1,0 +1,33 @@
+{
+  "description": "Read one saved memory entry in full, by its 1-based index. The index is the one memory_search returns, or /memories lists. Returns a bounded excerpt with truncation and continuation info: when truncated, re-call with start_char set to next_start_char for the rest. Use it to pull only the needed entry instead of re-searching.",
+  "name": "memory_get",
+  "parameters": {
+    "properties": {
+      "index": {
+        "description": "1-based entry number, as returned by memory_search or /memories.",
+        "type": "integer"
+      },
+      "max_chars": {
+        "description": "Max characters in the excerpt. Default 2000, max 8000.",
+        "type": "integer"
+      },
+      "start_char": {
+        "description": "Character offset to start the excerpt at. Default 0; use next_start_char to continue.",
+        "type": "integer"
+      },
+      "target": {
+        "description": "Which store holds the entry: 'memory' for personal notes, 'user' for user profile.",
+        "enum": [
+          "memory",
+          "user"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "target",
+      "index"
+    ],
+    "type": "object"
+  }
+}

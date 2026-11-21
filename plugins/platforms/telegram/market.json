@@ -1,0 +1,464 @@
+[
+ {
+  "name": "caveman",
+  "author": "juliusbrussee",
+  "repo": "https://github.com/juliusbrussee/caveman",
+  "source_url": "https://github.com/juliusbrussee/caveman",
+  "skill_count": 22,
+  "size_bytes": 180518,
+  "skills": [
+   {
+    "name": "cavecrew",
+    "path": "plugins/caveman/skills/cavecrew",
+    "skill_md": "plugins/caveman/skills/cavecrew/SKILL.md",
+    "description": "When to delegate to `cavecrew-investigator` (locate code), `cavecrew-builder` (1-2 file edit) or `cavecrew-reviewer` (diff review) instead of working inline or using `Explore`. Their output is compressed, so main context lasts longer.",
+    "files": 1,
+    "size_bytes": 4021
+   },
+   {
+    "name": "caveman",
+    "path": "plugins/caveman/skills/caveman",
+    "skill_md": "plugins/caveman/skills/caveman/SKILL.md",
+    "description": "Terse caveman voice: answer first, fluff gone, every technical fact kept. Use for /caveman, \"caveman mode\", \"talk like caveman\", \"be brief\", \"less tokens\". Stays on until \"stop caveman\" or \"normal mode\".",
+    "files": 4,
+    "size_bytes": 5936
+   },
+   {
+    "name": "caveman-commit",
+    "path": "skills/caveman-commit",
+    "skill_md": "skills/caveman-commit/SKILL.md",
+    "description": "Write a Conventional Commits message compressed to intent only. Use for \"write a commit\", \"commit message\", /commit or /caveman-commit.",
+    "files": 2,
+    "size_bytes": 3597
+   },
+   {
+    "name": "caveman-compress",
+    "path": "plugins/caveman/skills/caveman-compress",
+    "skill_md": "plugins/caveman/skills/caveman-compress/SKILL.md",
+    "description": "Compress a memory file such as CLAUDE.md or a todo list into caveman format to save input tokens, keeping a readable backup. Sends the file's text to the configured model provider. Trigger: /caveman-compress.",
+    "files": 8,
+    "size_bytes": 94979
+   },
+   {
+    "name": "caveman-discover",
+    "path": "skills/caveman-discover",
+    "skill_md": "skills/caveman-discover/SKILL.md",
+    "description": "Find and label every LLM workflow in the repository so Caveman Cloud groups spend by workflow instead of one bucket. Use for \"discover workflows\" or breaking LLM spend down by workflow.",
+    "files": 1,
+    "size_bytes": 5276
+   },
+   {
+    "name": "caveman-evidence-review",
+    "path": "skills/caveman-evidence-review",
+    "skill_md": "skills/caveman-evidence-review/SKILL.md",
+    "description": "Read-only review of Caveman Cloud evidence: cost, Cave Score, workflows, traces, latency, errors, routing, savings. Use when asked what Caveman found or where LLM spend goes.",
+    "files": 1,
+    "size_bytes": 3734
+   },
+   {
+    "name": "caveman-explore",
+    "path": "skills/caveman-explore",
+    "skill_md": "skills/caveman-explore/SKILL.md",
+    "description": "Read-only repository explorer for cold-start orientation, broad cross-file localization, or when a direct search failed. Skip it when the exact file or symbol is already named. Returns path:line citations only; its reads stay out of main context.",
+    "files": 3,
+    "size_bytes": 4481
+   },
+   {
+    "name": "caveman-help",
+    "path": "skills/caveman-help",
+    "skill_md": "skills/caveman-help/SKILL.md",
+    "description": "Quick-reference card for the three caveman skills and their commands. Trigger: /caveman-help or \"caveman help\".",
+    "files": 2,
+    "size_bytes": 3856
+   },
+   {
+    "name": "caveman-learn",
+    "path": "skills/caveman-learn",
+    "skill_md": "skills/caveman-learn/SKILL.md",
+    "description": "Act on a Caveman learn report - review the ranked token sinks, apply cost-lowering fixes with per-edit consent, and report what those fixes returned. Use when asked to lower an agent's token cost, what caveman has saved, to trim a heavy CLAUDE.md, or to offload re-pasted context into cavemem.",
+    "files": 6,
+    "size_bytes": 18639
+   },
+   {
+    "name": "caveman-manage",
+    "path": "skills/caveman-manage",
+    "skill_md": "skills/caveman-manage/SKILL.md",
+    "description": "Inspect Caveman Cloud's experiment lifecycle and block unsafe execution. Use when asked to start, approve, cancel, promote or roll back a Caveman experiment.",
+    "files": 1,
+    "size_bytes": 3916
+   },
+   {
+    "name": "caveman-optimize",
+    "path": "skills/caveman-optimize",
+    "skill_md": "skills/caveman-optimize/SKILL.md",
+    "description": "Turn a Caveman optimization observation into an operator-chosen candidate with a paired baseline evaluation. Use when asked to inspect or evaluate a Caveman optimization report. Needs explicit approval.",
+    "files": 1,
+    "size_bytes": 4723
+   },
+   {
+    "name": "caveman-review",
+    "path": "skills/caveman-review",
+    "skill_md": "skills/caveman-review/SKILL.md",
+    "description": "Compressed code review - one line per finding with location, problem and fix. Use for /caveman-review, \"review this PR\", or \"review the diff\".",
+    "files": 2,
+    "size_bytes": 3777
+   },
+   {
+    "name": "caveman-setup",
+    "path": "skills/caveman-setup",
+    "skill_md": "skills/caveman-setup/SKILL.md",
+    "description": "Wire a repository through the Caveman Cloud gateway so every LLM request is measured, with no behavior change. Use for \"set up caveman\" or adding LLM spend observability.",
+    "files": 1,
+    "size_bytes": 10524
+   },
+   {
+    "name": "caveman-stats",
+    "path": "plugins/caveman/skills/caveman-stats",
+    "skill_md": "plugins/caveman/skills/caveman-stats/SKILL.md",
+    "description": "Show recorded output and cache-read token usage and mode attribution for the current Claude Code session, or locate the host's native usage report. Trigger: /caveman-stats.",
+    "files": 1,
+    "size_bytes": 1866
+   },
+   {
+    "name": "investigate-first",
+    "path": "skills/investigate-first",
+    "skill_md": "skills/investigate-first/SKILL.md",
+    "description": "Diagnose ambiguous failures before editing. Use for unknown causes, intermittent behavior, performance regressions, or investigations needing evidence-ranked hypotheses.",
+    "files": 2,
+    "size_bytes": 890
+   },
+   {
+    "name": "lean-build",
+    "path": "skills/lean-build",
+    "skill_md": "skills/lean-build/SKILL.md",
+    "description": "Build feature work with high overbuilding risk. Use for new behavior, product slices, or integrations where repository reuse, strict scope, and an explicit stop condition matter.",
+    "files": 2,
+    "size_bytes": 1280
+   },
+   {
+    "name": "megacave",
+    "path": "plugins/caveman/skills/megacave",
+    "skill_md": "plugins/caveman/skills/megacave/SKILL.md",
+    "description": "Caveman in Classical Chinese: 文言文 register, far fewer characters, technical terms verbatim. Invoke only with /megacave or /caveman wenyan. Stays on until \"stop caveman\" or \"normal mode\".\n",
+    "files": 1,
+    "size_bytes": 2858
+   },
+   {
+    "name": "migration",
+    "path": "skills/migration",
+    "skill_md": "skills/migration/SKILL.md",
+    "description": "Implement reversible compatibility-safe transitions. Use for schema, data, API, protocol, configuration, or dependency migrations requiring rollback and preservation proof.",
+    "files": 2,
+    "size_bytes": 987
+   },
+   {
+    "name": "safe-refactor",
+    "path": "skills/safe-refactor",
+    "skill_md": "skills/safe-refactor/SKILL.md",
+    "description": "Restructure code while preserving behavior. Use for extraction, consolidation, ownership moves, or cleanup where verification must bracket structural edits.",
+    "files": 2,
+    "size_bytes": 906
+   },
+   {
+    "name": "surgical-patch",
+    "path": "skills/surgical-patch",
+    "skill_md": "skills/surgical-patch/SKILL.md",
+    "description": "Fix bugs and small behavior changes at the narrowest responsible layer. Use when regression proof, preserved surrounding behavior, and task-relevant tests matter.",
+    "files": 2,
+    "size_bytes": 858
+   },
+   {
+    "name": "ultracave",
+    "path": "plugins/caveman/skills/ultracave",
+    "skill_md": "plugins/caveman/skills/ultracave/SKILL.md",
+    "description": "Caveman at maximum compression: fragments, one word when one word is enough, each fact once. Invoke only with /ultracave or /caveman ultra. Stays on until \"stop caveman\" or \"normal mode\".\n",
+    "files": 1,
+    "size_bytes": 2513
+   },
+   {
+    "name": "verify-and-stop",
+    "path": "skills/verify-and-stop",
+    "skill_md": "skills/verify-and-stop/SKILL.md",
+    "description": "Prove existing work meets acceptance conditions without expanding scope. Use for validation-only tasks, completion checks, focused gate runs, and last-mile proof.",
+    "files": 2,
+    "size_bytes": 901
+   }
+  ]
+ },
+ {
+  "name": "skills",
+  "author": "anthropics",
+  "repo": "https://github.com/anthropics/skills",
+  "source_url": "https://github.com/anthropics/skills",
+  "skill_count": 18,
+  "size_bytes": 9965395,
+  "skills": [
+   {
+    "name": "academy-guide",
+    "path": "skills/academy-guide",
+    "skill_md": "skills/academy-guide/SKILL.md",
+    "description": "Stop and check this skill before finishing any reply to a question about how to use Claude or a Claude product — it recommends matching courses, tutorials, and use cases from Claude Academy (academy.claude.com), Anthropic's learning hub. Trigger on: \"how do I\", \"how can I\", \"getting started with\", \"what can Claude do\", \"teach me\", \"learn to use\"; questions about artifacts, projects, skills, plugins, connectors, MCP; requests about rolling Claude out to a team, class, or organization; and any ask for training materials, onboarding content, or learning resources. Use it when the user is learning how to use a feature or product — not when they are mid-task and just want the task done. This skill composes with other skills: after consulting product documentation to answer how a Claude feature works, also check here for a matching course or tutorial — a docs-grounded answer and an Academy recommendation belong together. Only recommend on a strong match; never invent Academy content.\n",
+    "files": 2,
+    "size_bytes": 19100
+   },
+   {
+    "name": "algorithmic-art",
+    "path": "skills/algorithmic-art",
+    "skill_md": "skills/algorithmic-art/SKILL.md",
+    "description": "Creating algorithmic art using p5.js with seeded randomness and interactive parameter exploration. Use this when users request creating art using code, generative art, algorithmic art, flow fields, or particle systems. Create original algorithmic art rather than copying existing artists' work to avoid copyright violations.",
+    "files": 4,
+    "size_bytes": 59784
+   },
+   {
+    "name": "brand-guidelines",
+    "path": "skills/brand-guidelines",
+    "skill_md": "skills/brand-guidelines/SKILL.md",
+    "description": "Applies Anthropic's official brand colors and typography to any sort of artifact that may benefit from having Anthropic's look-and-feel. Use it when brand colors or style guidelines, visual formatting, or company design standards apply.",
+    "files": 2,
+    "size_bytes": 13580
+   },
+   {
+    "name": "canvas-design",
+    "path": "skills/canvas-design",
+    "skill_md": "skills/canvas-design/SKILL.md",
+    "description": "Create beautiful visual art in .png and .pdf documents using design philosophy. You should use this skill when the user asks to create a poster, piece of art, design, or other static piece. Create original visual designs, never copying existing artists' work to avoid copyright violations.",
+    "files": 83,
+    "size_bytes": 5554003
+   },
+   {
+    "name": "discernment-nudge",
+    "path": "skills/discernment-nudge",
+    "skill_md": "skills/discernment-nudge/SKILL.md",
+    "description": "After you give a substantive answer or draft that the user may act on — advice or recommendations, drafted artifacts such as goals, plans, pitches, proposals, or emails, estimates or projections, analysis or interpretation of data, factual claims they may rely on, or a multi-step argument — invoke this skill BEFORE finalizing your reply and then, if it applies, append 2-3 short follow-up questions, each tied to something specific in what you just produced, that help the user check key facts, probe the reasoning or assumptions, and notice missing context. Do this at most once per conversation. Skip it when the user asked a trivial how-to or simple lookup, wants a purely educational explanation, asked you only to format, convert, or assemble a file from content they provided, is writing code they will run, is doing creative writing or casual chat, or already asked you to double-check, cite, or review — the skill file explains these boundaries and the exact output format.\n",
+    "files": 2,
+    "size_bytes": 21937
+   },
+   {
+    "name": "doc-coauthoring",
+    "path": "skills/doc-coauthoring",
+    "skill_md": "skills/doc-coauthoring/SKILL.md",
+    "description": "Guide users through a structured workflow for co-authoring documentation. Use when user wants to write documentation, proposals, technical specs, decision docs, or similar structured content. This workflow helps users efficiently transfer context, refine content through iteration, and verify the doc works for readers. Trigger when user mentions writing docs, creating proposals, drafting specs, or similar documentation tasks.",
+    "files": 1,
+    "size_bytes": 15815
+   },
+   {
+    "name": "docx",
+    "path": "skills/docx",
+    "skill_md": "skills/docx/SKILL.md",
+    "description": "Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx files) or Word templates (.dotx files). Triggers include: any mention of 'Word doc', 'word document', '.docx', '.dotx', or requests to produce professional documents with formatting like tables of contents, headings, page numbers, or letterheads. Also use when extracting or reorganizing content from .docx or .dotx files, inserting or replacing images in documents, performing find-and-replace in Word files, working with tracked changes or comments, or converting content into a polished Word document. If the user asks for a 'report', 'memo', 'letter', 'template', or similar deliverable as a Word or .docx file, use this skill. Do NOT use for PDFs, spreadsheets, Google Docs, or general coding tasks unrelated to document generation.",
+    "files": 61,
+    "size_bytes": 1166158
+   },
+   {
+    "name": "frontend-design",
+    "path": "skills/frontend-design",
+    "skill_md": "skills/frontend-design/SKILL.md",
+    "description": "Guidance for distinctive, intentional visual design when building new UI or reshaping an existing one. Helps with aesthetic direction, typography, and making choices that don't read as templated defaults.",
+    "files": 2,
+    "size_bytes": 19564
+   },
+   {
+    "name": "internal-comms",
+    "path": "skills/internal-comms",
+    "skill_md": "skills/internal-comms/SKILL.md",
+    "description": "A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use this skill whenever asked to write some sort of internal communications (status reports, leadership updates, 3P updates, company newsletters, FAQs, incident reports, project updates, etc.).",
+    "files": 6,
+    "size_bytes": 22393
+   },
+   {
+    "name": "mcp-builder",
+    "path": "skills/mcp-builder",
+    "skill_md": "skills/mcp-builder/SKILL.md",
+    "description": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).",
+    "files": 11,
+    "size_bytes": 159159
+   },
+   {
+    "name": "pdf",
+    "path": "skills/pdf",
+    "skill_md": "skills/pdf/SKILL.md",
+    "description": "Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or asks to produce one, use this skill.",
+    "files": 12,
+    "size_bytes": 68603
+   },
+   {
+    "name": "pptx",
+    "path": "skills/pptx",
+    "skill_md": "skills/pptx/SKILL.md",
+    "description": "Use this skill any time a .pptx or .potx file is involved in any way — as input, output, or both. This includes: creating slide decks, pitch decks, or presentations; reading, parsing, or extracting text from any .pptx or .potx file (even if the extracted content will be used elsewhere, like in an email or summary); editing, modifying, or updating existing presentations; combining or splitting slide files; working with templates (.potx), layouts, speaker notes, or comments. Trigger whenever the user mentions \"deck,\" \"slides,\" \"presentation,\" or references a .pptx or .potx filename, regardless of what they plan to do with the content afterward. If a .pptx or .potx file needs to be opened, created, or touched, use this skill.",
+    "files": 58,
+    "size_bytes": 1199661
+   },
+   {
+    "name": "skill-creator",
+    "path": "skills/skill-creator",
+    "skill_md": "skills/skill-creator/SKILL.md",
+    "description": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.",
+    "files": 18,
+    "size_bytes": 224992
+   },
+   {
+    "name": "slack-gif-creator",
+    "path": "skills/slack-gif-creator",
+    "skill_md": "skills/slack-gif-creator/SKILL.md",
+    "description": "Knowledge and utilities for creating animated GIFs optimized for Slack. Provides constraints, validation tools, and animation concepts. Use when users request animated GIFs for Slack like \"make me a GIF of X doing Y for Slack.\"",
+    "files": 7,
+    "size_bytes": 43697
+   },
+   {
+    "name": "theme-factory",
+    "path": "skills/theme-factory",
+    "skill_md": "skills/theme-factory/SKILL.md",
+    "description": "Toolkit for styling artifacts with a theme. These artifacts can be slides, docs, reportings, HTML landing pages, etc. There are 10 pre-set themes with colors/fonts that you can apply to any artifact that has been creating, or can generate a new theme on-the-fly.",
+    "files": 13,
+    "size_bytes": 144094
+   },
+   {
+    "name": "web-artifacts-builder",
+    "path": "skills/web-artifacts-builder",
+    "skill_md": "skills/web-artifacts-builder/SKILL.md",
+    "description": "Suite of tools for creating elaborate, multi-component claude.ai HTML artifacts using modern frontend web technologies (React, Tailwind CSS, shadcn/ui). Use for complex artifacts requiring state management, routing, or shadcn/ui components - not for simple single-file HTML/JSX artifacts.",
+    "files": 5,
+    "size_bytes": 45840
+   },
+   {
+    "name": "webapp-testing",
+    "path": "skills/webapp-testing",
+    "skill_md": "skills/webapp-testing/SKILL.md",
+    "description": "Toolkit for interacting with and testing local web applications using Playwright. Supports verifying frontend functionality, debugging UI behavior, capturing browser screenshots, and viewing browser logs.",
+    "files": 6,
+    "size_bytes": 22394
+   },
+   {
+    "name": "xlsx",
+    "path": "skills/xlsx",
+    "skill_md": "skills/xlsx/SKILL.md",
+    "description": "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .xltx, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path — even casually (like \"the xlsx in my downloads\") — and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files (malformed rows, misplaced headers, junk data) into proper spreadsheets. The deliverable must be a spreadsheet file. Do NOT trigger when the primary deliverable is a Word document, HTML report, standalone Python script, database pipeline, or Google Sheets API integration, even if tabular data is involved.",
+    "files": 53,
+    "size_bytes": 1164621
+   }
+  ]
+ },
+ {
+  "name": "superpowers",
+  "author": "obra",
+  "repo": "https://github.com/obra/superpowers",
+  "source_url": "https://github.com/obra/superpowers",
+  "skill_count": 14,
+  "size_bytes": 417283,
+  "skills": [
+   {
+    "name": "brainstorming",
+    "path": "skills/brainstorming",
+    "skill_md": "skills/brainstorming/SKILL.md",
+    "description": "You MUST use this before any creative work - creating features, building components, adding functionality, modifying behavior, or planning anything new, in software or out of it (a talk, a business, a renovation).",
+    "files": 8,
+    "size_bytes": 79470
+   },
+   {
+    "name": "diagnosing-superpowers",
+    "path": "skills/diagnosing-superpowers",
+    "skill_md": "skills/diagnosing-superpowers/SKILL.md",
+    "description": "Use when a superpowers session went wrong and your human partner wants to know why — repeated work, ignored plans, stumbles, poor results, a skill that didn't fire, \"it took too long\", \"why is it so expensive\", \"what is it doing\" — or wants to build a bug report for the superpowers maintainers, for the current session or a past one identified by id or path, on any harness.",
+    "files": 20,
+    "size_bytes": 41699
+   },
+   {
+    "name": "dispatching-parallel-agents",
+    "path": "skills/dispatching-parallel-agents",
+    "skill_md": "skills/dispatching-parallel-agents/SKILL.md",
+    "description": "Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies",
+    "files": 1,
+    "size_bytes": 6078
+   },
+   {
+    "name": "executing-plans",
+    "path": "skills/executing-plans",
+    "skill_md": "skills/executing-plans/SKILL.md",
+    "description": "Use when executing an implementation plan in the current session as the implementer yourself — your human partner chose inline execution, or no subagent tool is available",
+    "files": 3,
+    "size_bytes": 21449
+   },
+   {
+    "name": "finishing-a-development-branch",
+    "path": "skills/finishing-a-development-branch",
+    "skill_md": "skills/finishing-a-development-branch/SKILL.md",
+    "description": "Use when implementation is complete, all tests pass, and you need to decide how to integrate the work",
+    "files": 1,
+    "size_bytes": 7781
+   },
+   {
+    "name": "receiving-code-review",
+    "path": "skills/receiving-code-review",
+    "skill_md": "skills/receiving-code-review/SKILL.md",
+    "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation",
+    "files": 1,
+    "size_bytes": 6203
+   },
+   {
+    "name": "requesting-code-review",
+    "path": "skills/requesting-code-review",
+    "skill_md": "skills/requesting-code-review/SKILL.md",
+    "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements",
+    "files": 2,
+    "size_bytes": 9423
+   },
+   {
+    "name": "subagent-driven-development",
+    "path": "skills/subagent-driven-development",
+    "skill_md": "skills/subagent-driven-development/SKILL.md",
+    "description": "Use when executing implementation plans with independent tasks in the current session",
+    "files": 15,
+    "size_bytes": 65490
+   },
+   {
+    "name": "systematic-debugging",
+    "path": "skills/systematic-debugging",
+    "skill_md": "skills/systematic-debugging/SKILL.md",
+    "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes",
+    "files": 6,
+    "size_bytes": 29057
+   },
+   {
+    "name": "using-git-worktrees",
+    "path": "skills/using-git-worktrees",
+    "skill_md": "skills/using-git-worktrees/SKILL.md",
+    "description": "Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback",
+    "files": 1,
+    "size_bytes": 6813
+   },
+   {
+    "name": "using-superpowers",
+    "path": "skills/using-superpowers",
+    "skill_md": "skills/using-superpowers/SKILL.md",
+    "description": "Use when starting any conversation - establishes how to find and use skills, requiring skill invocation before ANY response including clarifying questions",
+    "files": 8,
+    "size_bytes": 20630
+   },
+   {
+    "name": "verification-before-completion",
+    "path": "skills/verification-before-completion",
+    "skill_md": "skills/verification-before-completion/SKILL.md",
+    "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always",
+    "files": 1,
+    "size_bytes": 3646
+   },
+   {
+    "name": "writing-plans",
+    "path": "skills/writing-plans",
+    "skill_md": "skills/writing-plans/SKILL.md",
+    "description": "Use when you have a spec or requirements for a multi-step task, before touching code",
+    "files": 1,
+    "size_bytes": 10335
+   },
+   {
+    "name": "writing-skills",
+    "path": "skills/writing-skills",
+    "skill_md": "skills/writing-skills/SKILL.md",
+    "description": "Use when creating new skills, editing existing skills, or verifying skills work before deployment",
+    "files": 10,
+    "size_bytes": 109209
+   }
+  ]
+ }
+]

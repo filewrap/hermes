@@ -1,0 +1,29 @@
+{
+  "description": "Search your saved memories (personal notes + user profile). Use it when an answer depends on prior work, decisions, dates, people, preferences, or todos not already present in the current turn. Full-text search over the memory entries: terms are ANDed, quoted spans match exact phrases, OR broadens, and a plain word also matches longer words starting with it. Returns ranked hits with the excerpt and its source file+line; use memory_get with a hit's target + index to read the rest of a truncated entry. Do not repeat memory retrieval when supplied context fully answers the question. If low confidence after searching, say you checked.",
+  "name": "memory_search",
+  "parameters": {
+    "properties": {
+      "max_results": {
+        "description": "Max hits to return. Default 5, max 20.",
+        "type": "integer"
+      },
+      "query": {
+        "description": "Keywords, a phrase, or a boolean expression to find in saved memories (e.g. 'deployment checklist', '\"release process\"', 'deploy OR rollback').",
+        "type": "string"
+      },
+      "target": {
+        "description": "Which store to search: 'memory' for personal notes, 'user' for user profile, 'all' (default) for both.",
+        "enum": [
+          "memory",
+          "user",
+          "all"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "query"
+    ],
+    "type": "object"
+  }
+}

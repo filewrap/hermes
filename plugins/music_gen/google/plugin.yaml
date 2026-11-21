@@ -1,0 +1,7 @@
+name: google
+version: 1.0.0
+description: "Google Lyria music generation backend. Lyria 3 Clip / Pro via the Gemini API generateContent endpoint."
+author: NousResearch
+kind: backend
+requires_env:
+  - GOOGLE_API_KEY
