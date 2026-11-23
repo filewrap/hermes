@@ -63,11 +63,11 @@ jobs:
 
       - name: Checkout code
         if: steps.gate.outputs.configured != '0'
-        uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a  # v1
+        uses: useblacksmith/checkout@75c49b6ed30ce59336e9252425796cfcfac155f8  # v1
 
       - name: Install uv
         if: steps.gate.outputs.configured != '0'
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # 10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # 10.4.0
         with:
           version: "0.9.28"
           enable-cache: true

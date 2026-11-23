@@ -46,7 +46,7 @@ jobs:
     environment: release-signing
     timeout-minutes: 90
     steps:
-      - uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a  # v1
+      - uses: useblacksmith/checkout@75c49b6ed30ce59336e9252425796cfcfac155f8  # v1
         with:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
@@ -158,7 +158,7 @@ jobs:
     environment: release-signing
     timeout-minutes: 90
     steps:
-      - uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a  # v1
+      - uses: useblacksmith/checkout@75c49b6ed30ce59336e9252425796cfcfac155f8  # v1
         with:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
