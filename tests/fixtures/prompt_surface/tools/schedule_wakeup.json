@@ -1,0 +1,40 @@
+{
+  "description": "Schedule a wakeup for yourself: at the given time this SAME conversation resumes with the prompt you provide, as if the user had sent it. Use it to defer your own continuation when you cannot keep the turn open: a build/deploy/CI window finishing later, a slow-changing thing to re-check, a long-running task to poll after a sensible interval. Do NOT use it for waits a blocking terminal command covers (raise its timeout instead), for anything within the next few seconds, or for periodic schedules (that is cronjob_manage / the user's /loop). Give exactly one of `delay` (30s, 5m, 2h, 1d; bare number = seconds; min 10s, max 7 days) or `when` (ISO-8601; an offset or Z makes it absolute, otherwise host local time; must be in the future). A session holds at most 10 pending wakeups. action='list' shows pending ids; action='cancel' with wakeup_id removes one (cancelling an unknown id is a harmless no-op). When it fires you receive the prompt marked [Scheduled wakeup] with a note that no user may be present.",
+  "name": "schedule_wakeup",
+  "parameters": {
+    "properties": {
+      "action": {
+        "default": "schedule",
+        "description": "schedule (default) a new wakeup, list pending ones, or cancel by wakeup_id.",
+        "enum": [
+          "schedule",
+          "list",
+          "cancel"
+        ],
+        "type": "string"
+      },
+      "delay": {
+        "description": "Relative span from now, e.g. 30s, 5m, 2h, 1d. A bare number is seconds.",
+        "type": "string"
+      },
+      "prompt": {
+        "description": "Required for schedule: the text this session resumes with when the wakeup fires.",
+        "type": "string"
+      },
+      "reason": {
+        "description": "Optional short label shown in status lines and the list.",
+        "type": "string"
+      },
+      "wakeup_id": {
+        "description": "Required for cancel: the id returned at schedule time.",
+        "type": "string"
+      },
+      "when": {
+        "description": "Absolute ISO-8601 date-time, e.g. 2026-09-13T14:30:00Z.",
+        "type": "string"
+      }
+    },
+    "required": [],
+    "type": "object"
+  }
+}

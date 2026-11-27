@@ -1,0 +1,5 @@
+name: comfy
+version: 1.0.0
+description: "ComfyUI music generation backend. Operator-supplied workflow against a local ComfyUI server or Comfy Cloud."
+author: NousResearch
+kind: backend

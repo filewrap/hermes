@@ -1,0 +1,473 @@
+"""SessionStore explicit suspension, crash-recovery markers, pruning and shared clock/id helpers."""
+
+from __future__ import annotations
+
+import logging
+import os
+import time
+import uuid
+from datetime import datetime, timedelta, timezone, UTC
+from typing import TYPE_CHECKING, Any, Optional
+
+from gateway.session_persistence import _apply_to_held_row, _held_row_entry
+from session_rules.session_ids import new_session_id
+
+if TYPE_CHECKING:
+    from gateway.session import SessionEntry, SessionSource
+
+# Log-record parity with the origin module.
+logger = logging.getLogger("gateway.session")
+
+
+def _now() -> datetime:
+    """Return the current local time."""
+    return datetime.now()
+
+
+def _new_session_id(now: datetime) -> str:
+    return new_session_id(now, hex_len=8)
+
+
+def _iso(dt: Optional[datetime]) -> Optional[str]:
+    return dt.isoformat() if dt else None
+
+
+def _parse_iso(value) -> Optional[datetime]:
+    """``datetime.fromisoformat`` that returns None for empty/malformed input."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+
+# Auto-continue freshness window (1 hour) after the ``resume_pending`` mark; ``gateway/run.py``
+# bridges config.yaml ``agent.gateway_auto_continue_freshness`` into the env var at startup.
+_AUTO_CONTINUE_FRESHNESS_SECS_DEFAULT = 60 * 60
+
+
+# Set on a delegate subagent's row a user explicitly switched a chat onto (``/resume <child> --all``,
+# handoff). ``_delegate_from`` stays: it is lineage (compression continuations, the running worker's
+# publish check), not a routing flag; this marker alone tells the route guard the user chose the row.
+CHAT_ADOPTED_MARKER = "_chat_adopted"
+
+
+def is_delegate_child_row(row: dict) -> bool:
+    """A delegate subagent's row: never a chat's route or topic-binding target. A row that also carries
+    ``_reset_from`` is a /new continuation of the chat whose config picked up the marker (#109073), and
+    one carrying ``CHAT_ADOPTED_MARKER`` was chosen by the user; both stay routable (same rule as peer
+    recovery's ``_DELEGATE_CHILD_EXCLUSION_SQL``)."""
+    from persistence.conversation.sessions import parse_model_config
+    config = parse_model_config(row.get("model_config"))
+    return (bool(config.get("_delegate_from")) and "_reset_from" not in config
+            and not config.get(CHAT_ADOPTED_MARKER))
+
+
+def auto_continue_freshness_window() -> float:
+    """Resume-scheduler freshness window; stale automation never discards the transcript."""
+    raw = os.environ.get("HERMES_AUTO_CONTINUE_FRESHNESS")
+    try:
+        return float(raw) if raw else float(_AUTO_CONTINUE_FRESHNESS_SECS_DEFAULT)
+    except (TypeError, ValueError):
+        return float(_AUTO_CONTINUE_FRESHNESS_SECS_DEFAULT)
+
+
+def sanitize_turn_model(value: Any) -> Optional[dict[str, str]]:
+    """``{"model": ..., "provider": ...}`` with str values only, or ``None`` when no usable model.
+
+    The turn-model stamp carries no secrets — only the route identity — but a
+    persisted row is untrusted input all the same: a non-dict / non-str value
+    reads as unknown (fail open) rather than raising.
+    """
+    if not isinstance(value, dict):
+        return None
+    model = value.get("model")
+    if not isinstance(model, str) or not model.strip():
+        return None
+    cleaned = {"model": model.strip()}
+    provider = value.get("provider")
+    if isinstance(provider, str) and provider.strip():
+        cleaned["provider"] = provider.strip()
+    return cleaned
+
+
+def turn_model_from_agent(agent: Any) -> Optional[dict[str, str]]:
+    """The route identity of a built agent, or ``None`` when it names no model."""
+    if agent is None:
+        return None
+    return sanitize_turn_model({
+        "model": getattr(agent, "model", None),
+        "provider": getattr(agent, "provider", None),
+    })
+
+
+def turn_model_key(model: Any) -> Optional[tuple[str, str]]:
+    """``(provider, model)`` for comparison, or ``None`` when the model is unknown.
+
+    Provider slugs compare case-insensitively; model ids are case-sensitive.
+    """
+    cleaned = sanitize_turn_model(model)
+    if cleaned is None:
+        return None
+    return ((cleaned.get("provider") or "").lower(), cleaned["model"])
+
+
+def resume_model_matches(stamped: Any, current: Any) -> bool:
+    """True when a resume under *current* is allowed: either side unknown (fail open —
+    a marker that predates the stamp must not block a resume), or the same
+    (provider, model). A known mismatch means the model changed since the
+    interrupted turn: the partial transcript stays as history, no resume turn.
+    """
+    stamped_key, current_key = turn_model_key(stamped), turn_model_key(current)
+    if stamped_key is None or current_key is None:
+        return True
+    return stamped_key == current_key
+
+
+class SessionLifecycleMixin:
+    """SessionStore explicit boundaries and crash-recovery markers."""
+
+    def _is_session_ended_in_db(self, session_id: str, session_key: Optional[str] = None) -> bool:
+        """True iff state.db says the session is gone: ended (non-null end_reason), hard-deleted
+        (no row in a readable owning DB), or a delegate subagent's row (never a chat's route). No DB or a DB error -> False (same failure mode as
+        ``_prune_stale_sessions_locked``). Lets routing self-heal a session finalized or deleted
+        while the gateway stays alive. Store resolved from the owning profile.
+
+        Used by ``get_or_create_session`` to self-heal at routing time: ``_prune_stale_sessions_locked``
+        only runs at startup, so a session ended in the DB while the gateway stays alive (any path that
+        finalizes the row without clearing sessions.json) would otherwise be reused as a live routing key
+        and silently swallow every subsequent message until the next restart (#54878 — the live-gateway
+        variant of #52804/FM9). A hard delete is the same shape one step further: the row is GONE, not
+        merely ended, and reusing the route makes run_agent's INSERT OR IGNORE resurrect the deleted
+        session with its old id (#42422) — so a missing row is treated exactly like an ended one. DB
+        errors are non-fatal — never block routing on a failed lookup.
+        The store is resolved from the row's owning profile rather than the ambient scope: an unscoped
+        background writer keeps its own copy of the same session, and comparing against that copy reports a
+        live session as ended (#66887).
+
+        Pass *session_key* when the owning key is known but the id may have left the routing index:
+        after the self-heal re-homes the key, the id has no owner and would resolve to the launch
+        store, which never holds a routed profile's rows (#118862).
+        """
+        with self._lock:
+            if session_id in self._rows_pending:
+                # A route transition published this id and has not inserted/reopened its row yet
+                # (a /new racing a turn that resolves the route as it finishes): healing it here
+                # would hand the route back to the conversation the user just left.
+                return False
+        store = self._persistence_for_key(session_key) if session_key else self._persistence_for_session_id(session_id)
+        if not store or not session_id:
+            return False
+        try:
+            row = store.sessions.get(session_id)
+        except Exception:
+            return False
+        # A delegate subagent's row is never a chat's conversation: a route left naming one (written while
+        # the subagent captured the thread, #138210) is stale, so recovery hands the chat back to its owner.
+        return row is None or row.end_reason is not None or is_delegate_child_row(row.as_session_row())
+
+    def _local_receipt_target(self, entry: Optional[SessionEntry]) -> Optional[str]:
+        """The physical target the authority's receipt names for *entry*'s local route, else None
+        (not a local route, no receipt, or the receipt belongs to another route).
+
+        Such a route moves only through the authority (compression and reset advance the receipt
+        and the route in one transaction), and its first admitted turn reopens a stamped row
+        (``reopen_local_session``). A row stamped ended (a viewer's ``ws_orphan_reap``) is
+        therefore never a stale route: dropping it minted a replacement id the authority refuses
+        (``admission_conflict``) and stranded the conversation (#140642)."""
+        origin = getattr(entry, "origin", None)
+        if origin is None or getattr(origin, "platform", None) is None or origin.platform.value != "local":
+            return None
+        store = self._persistence_for_key(entry.session_key)
+        if store is None:
+            return None
+        from persistence.core.errors import STORE_FAILURES, AuthorityRefusal
+        try:
+            receipt = store.bindings.receipt(str(origin.chat_id))
+            if receipt.route != entry.session_key:
+                return None
+            return str(receipt.entry["session_id"]) or None
+        except (AuthorityRefusal, *STORE_FAILURES, KeyError, TypeError, AttributeError):
+            return None
+
+    def _api_bound(self, entry: Optional[SessionEntry]) -> bool:
+        """*entry*'s API route is the one its binding receipt names (``bind_api_session``). Like a
+        local receipt route it moves only through the authority, and its next admitted turn reopens a
+        stamped row (``reopen_api_session``): replacing it forked the caller's conversation onto a
+        minted id every later run on it refused (``admission_conflict``)."""
+        origin = getattr(entry, "origin", None)
+        if origin is None or getattr(origin, "platform", None) is None or origin.platform.value != "api_server":
+            return False
+        store = self._persistence_for_key(entry.session_key)
+        if store is None:
+            return False
+        from persistence.core.errors import STORE_FAILURES
+        try:
+            binding = store.bindings.api_binding(str(origin.chat_id))
+            return binding is not None and binding.entry["session_key"] == entry.session_key
+        except (*STORE_FAILURES, ValueError, KeyError, TypeError):
+            return False
+
+    def _route_reset_reason(self, entry: SessionEntry) -> Optional[str]:
+        """Only explicit suspension replaces a routed conversation; time never does."""
+        return "suspended" if entry.suspended else None
+
+    def _update_entry(self, session_key: str, mutate) -> bool:
+        """Apply ``mutate(entry)`` under ``_lock`` and full-save; False when the entry is missing
+        or *mutate* returned False (nothing to persist)."""
+        with self._lock:
+            entry = self._entry_locked(session_key)
+            if entry is None or mutate(entry) is False:
+                return False
+            self._save()
+            return True
+
+    def _update_all_entries_locked(self, mutate) -> int:
+        """Apply ``mutate(entry) -> bool`` to every entry under ``_lock``; save once if any
+        returned True. Returns the count that did."""
+        with self._lock:
+            self._ensure_loaded_locked()
+            changed = sum(1 for entry in self._entries.values() if mutate(entry))
+            held = getattr(self, "_unparsed_routes", None) or {}
+            for key, data in list(held.items()):  # a held row gets the verdict now, on disk too
+                updated = _apply_to_held_row(data, mutate)
+                if updated is not None:
+                    held[key], changed = updated, changed + 1
+            if changed:
+                self._save()
+        return changed
+
+    def suspend_session(self, session_key: str) -> bool:
+        """Mark a session suspended so it auto-resets on next access (/stop). True if it existed.
+
+        Used by ``/stop`` to prevent stuck sessions from being resumed after a gateway restart (#7536).
+        """
+        return self._update_entry(session_key, lambda e: setattr(e, "suspended", True))
+
+    def _set_turn_marker_locked(self, session_key: str, entry: SessionEntry, token, started_at) -> None:
+        """Persist the active-turn pair BEFORE publishing it in memory, so a failed write can
+        neither leak an unowned token nor drop a live one. Lock held.
+
+        A new token supersedes any /stop fence and any model stamp (both belong to the
+        previous turn); clearing a token spends the fence bound to it and drops its
+        stamp, so a fenced turn's unwind leaves nothing behind to re-arm.
+        """
+        clearing_token = entry.active_turn_token if token is None else None
+        candidate = entry.to_dict()
+        candidate["active_turn_token"] = token
+        candidate["active_turn_started_at"] = _iso(started_at)
+        if token is not None:
+            candidate.pop("stop_fence_token", None)
+            candidate.pop("active_turn_model", None)
+        else:
+            if entry.stop_fence_token and entry.stop_fence_token == clearing_token:
+                candidate.pop("stop_fence_token", None)
+            candidate.pop("active_turn_model", None)
+        touched = _now() if started_at is not None else None
+        if touched is not None:
+            # Keeps the legacy 120s startup heuristic working for an older binary during a rolling
+            # downgrade/upgrade window.
+            candidate["updated_at"] = touched.isoformat()
+        self._save_entry(session_key, entry_data=candidate, lock_held=True)
+        entry.active_turn_token = token
+        entry.active_turn_started_at = started_at
+        if token is not None:
+            entry.stop_fence_token = None
+            entry.active_turn_model = None
+        else:
+            if entry.stop_fence_token and entry.stop_fence_token == clearing_token:
+                entry.stop_fence_token = None
+            entry.active_turn_model = None
+        if touched is not None:
+            entry.updated_at = touched
+
+    def mark_turn_active(self, session_key: str) -> Optional[str]:
+        """Persist exact ownership of the running agent turn; returns the opaque token for
+        :meth:`clear_turn_active`. Re-marking replaces the previous token so a stale asynchronous
+        unwind cannot clear a newer turn."""
+        token = uuid.uuid4().hex
+        with self._lock:
+            entry = self._entry_locked(session_key)
+            if entry is None:
+                return None
+            # Aware UTC, unlike the local wall clock elsewhere: the next process compares it with
+            # epoch transcript timestamps and may run in another zone (DST, container vs unit TZ).
+            self._set_turn_marker_locked(session_key, entry, token, datetime.now(UTC))
+        return token
+
+    def clear_turn_active(self, session_key: str, token: str) -> bool:
+        """Compare-and-swap clear an active-turn marker; ``False`` when the entry disappeared or a
+        newer turn owns it."""
+        with self._lock:
+            entry = self._entry_locked(session_key)
+            if entry is None or entry.active_turn_token != token:
+                return False
+            self._set_turn_marker_locked(session_key, entry, None, None)
+        return True
+
+    def stamp_turn_model(self, session_key: str, model: Any) -> bool:
+        """Record the (provider, model) the live turn runs under, on its active-turn
+        marker. Only stamps while a marker is held: the turn lease guarantees the
+        marker belongs to the calling turn, and a marker-less session has no
+        interrupted turn to gate. Best-effort — ``False`` when nothing was stamped."""
+        stamped = sanitize_turn_model(model)
+        if stamped is None:
+            return False
+
+        def _apply(entry: SessionEntry) -> bool:
+            if not entry.active_turn_token:
+                return False
+            entry.active_turn_model = dict(stamped)
+            return True
+
+        return self._update_entry(session_key, _apply)
+
+    def mark_turn_force_stopped(self, session_key: str) -> bool:
+        """Record a forced /stop for *session_key*: the stopped turn must never auto-resume.
+
+        Clears any ``resume_pending`` flag outright (a stopped resume turn does not
+        re-arm on the next boot), and fences the live turn's active token so a
+        crash or shutdown mark landing before the turn unwinds cannot promote it
+        either. With no live turn only the flag clear applies. True when anything
+        changed. This is the durable half of /stop — the in-memory interrupt alone
+        cannot survive the unwind window.
+        """
+        def _apply(entry: SessionEntry) -> bool:
+            changed = False
+            if entry.resume_pending:
+                entry.resume_pending = False
+                entry.resume_reason = None
+                entry.last_resume_marked_at = None
+                entry.resume_model = None
+                changed = True
+            if entry.active_turn_token and entry.stop_fence_token != entry.active_turn_token:
+                entry.stop_fence_token = entry.active_turn_token
+                changed = True
+            return changed
+
+        return self._update_entry(session_key, _apply)
+
+    def recover_interrupted_turns(self, max_age_seconds: int = 60 * 60) -> int:
+        """Promote crash-left turn markers into ``resume_pending`` (unclean startup only).
+        Old/invalid markers are cleared without resuming; suspended sessions are never re-armed;
+        a turn fenced by a forced /stop is cleared without resuming either (the stop wins
+        over the crash). The promoted marker carries the interrupted turn's model so the
+        resume gate can refuse a resume under a different model. Returns the number of
+        newly promoted sessions."""
+        now, epoch_now = _now(), time.time()
+        promoted = 0
+
+        def _promote(entry: SessionEntry) -> bool:
+            nonlocal promoted
+            if not entry.active_turn_token:
+                return False
+            started_at = entry.active_turn_started_at
+            # Epoch arithmetic: a pre-upgrade naive marker reads as local time, an aware one exactly.
+            marker_is_stale = started_at is None or (
+                max_age_seconds > 0 and epoch_now - started_at.timestamp() > max_age_seconds
+            )
+            fenced = bool(
+                entry.stop_fence_token
+                and entry.active_turn_token
+                and entry.stop_fence_token == entry.active_turn_token
+            )
+            if not marker_is_stale and not entry.suspended and not fenced:
+                if entry.resume_pending:
+                    # A drain-timeout marker is more specific; keep it.
+                    if entry.last_resume_marked_at is None:
+                        entry.last_resume_marked_at = now
+                    if entry.resume_model is None:
+                        entry.resume_model = sanitize_turn_model(entry.active_turn_model)
+                else:
+                    entry.resume_pending = True
+                    entry.resume_reason = "restart_interrupted"
+                    entry.last_resume_marked_at = now  # freshness starts at discovery
+                    entry.resume_model = sanitize_turn_model(entry.active_turn_model)
+                    promoted += 1
+            entry.active_turn_token = None
+            entry.active_turn_started_at = None
+            entry.active_turn_model = None
+            entry.stop_fence_token = None
+            return True
+
+        self._update_all_entries_locked(_promote)
+        return promoted
+
+    def discard_active_turn_markers(self) -> int:
+        """Clear orphan turn markers after a verified clean shutdown."""
+        def _discard(entry: SessionEntry) -> bool:
+            if not entry.active_turn_token and entry.active_turn_started_at is None:
+                return False
+            entry.active_turn_token = None
+            entry.active_turn_started_at = None
+            entry.active_turn_model = None
+            entry.stop_fence_token = None
+            return True
+        return self._update_all_entries_locked(_discard)
+
+    def mark_resume_pending(self, session_key: str, reason: str = "restart_timeout",
+                            model: Any = None) -> bool:
+        """Mark a session resumable after a restart interruption (keeps the session_id/transcript,
+        unlike ``suspend_session``). True if marked.
+
+        Refuses a session whose live turn is fenced by a forced /stop, and a suspended
+        one — the stop wins over the shutdown mark. ``model`` (the interrupted turn's
+        route, ``{"model", "provider"}``) is recorded on the marker when known so the
+        resume gate can refuse a resume under a different model; when omitted the
+        turn's stamped model is used, and an already-pending marker keeps its own.
+        """
+        def _apply(entry: SessionEntry):
+            if entry.suspended:  # never override an explicit ``suspended`` (hard forced-wipe)
+                return False
+            if (
+                entry.stop_fence_token
+                and entry.active_turn_token
+                and entry.stop_fence_token == entry.active_turn_token
+            ):
+                return False
+            stamped = sanitize_turn_model(model) or sanitize_turn_model(entry.active_turn_model)
+            entry.resume_pending = True
+            entry.resume_reason = reason
+            entry.last_resume_marked_at = _now()
+            if stamped is not None:
+                entry.resume_model = stamped
+        return self._update_entry(session_key, _apply)
+
+    def clear_resume_pending(self, session_key: str) -> bool:
+        """Clear the resume-pending flag after a successful resumed turn; True if cleared."""
+        def _apply(entry: SessionEntry):
+            if not entry.resume_pending:
+                return False
+            entry.resume_pending = False
+            entry.resume_reason = None
+            entry.last_resume_marked_at = None
+            entry.resume_model = None
+        return self._update_entry(session_key, _apply)
+
+    def prune_old_entries(self, max_age_days: int) -> int:
+        """Drop routing entries idle (by ``updated_at``) for more than max_age_days; suspended
+        entries and entries with active background processes are kept. Only the key -> session_id
+        mapping is dropped (the transcript stays). ``max_age_days <= 0`` disables. Returns count."""
+        if max_age_days is None or max_age_days <= 0:
+            return 0
+        cutoff = _now() - timedelta(days=max_age_days)
+        def _idle(key: str, entry: SessionEntry) -> bool:
+            # The callback is keyed by session_key, NOT session_id.
+            return (not entry.suspended and entry.updated_at < cutoff
+                    and not self._has_active_processes_safe(key, context="prune"))
+
+        with self._lock:
+            self._ensure_loaded_locked()
+            held = getattr(self, "_unparsed_routes", None) or {}
+            removed_keys = [key for key, entry in list(self._entries.items()) if _idle(entry.session_key, entry)]
+            # A held route (platform not registered yet) expires on the same clock, or it outlives every peer.
+            removed_keys += [key for key, data in held.items()
+                             if key not in self._entries and _idle(key, _held_row_entry(data))]
+            self._drop_routes_locked(removed_keys)
+            if removed_keys:
+                self._save()
+        if removed_keys:
+            logger.info("SessionStore pruned %d entries older than %d days",
+                        len(removed_keys), max_age_days)
+        return len(removed_keys)

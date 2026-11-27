@@ -1,0 +1,7 @@
+name: minimax
+version: 1.0.0
+description: "MiniMax music generation backend. Music 2.6 / Music Cover via the hosted /v1/music_generation API (existing paying accounts)."
+author: NousResearch
+kind: backend
+requires_env:
+  - MINIMAX_API_KEY

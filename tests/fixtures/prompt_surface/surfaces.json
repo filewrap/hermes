@@ -1,0 +1,282 @@
+{
+  "cli-code.claude": {
+    "prompt_tokens": {
+      "context": 4578,
+      "stable": 1071,
+      "volatile": 315
+    },
+    "tool_tokens": 9348,
+    "tools": [
+      "clarify",
+      "delegate_task",
+      "execute_code",
+      "memory",
+      "memory_get",
+      "memory_search",
+      "patch",
+      "read_file",
+      "schedule_wakeup",
+      "search_files",
+      "skill_manage",
+      "skill_view",
+      "skills_list",
+      "terminal",
+      "todo_list",
+      "tool_call",
+      "tool_describe",
+      "tool_search",
+      "web_extract",
+      "web_search",
+      "write_file"
+    ]
+  },
+  "cli.claude": {
+    "prompt_tokens": {
+      "context": 3828,
+      "stable": 1071,
+      "volatile": 315
+    },
+    "tool_tokens": 9348,
+    "tools": [
+      "clarify",
+      "delegate_task",
+      "execute_code",
+      "memory",
+      "memory_get",
+      "memory_search",
+      "patch",
+      "read_file",
+      "schedule_wakeup",
+      "search_files",
+      "skill_manage",
+      "skill_view",
+      "skills_list",
+      "terminal",
+      "todo_list",
+      "tool_call",
+      "tool_describe",
+      "tool_search",
+      "web_extract",
+      "web_search",
+      "write_file"
+    ]
+  },
+  "cli.gemini": {
+    "prompt_tokens": {
+      "context": 3828,
+      "stable": 1071,
+      "volatile": 312
+    },
+    "tool_tokens": 9348,
+    "tools": [
+      "clarify",
+      "delegate_task",
+      "execute_code",
+      "memory",
+      "memory_get",
+      "memory_search",
+      "patch",
+      "read_file",
+      "schedule_wakeup",
+      "search_files",
+      "skill_manage",
+      "skill_view",
+      "skills_list",
+      "terminal",
+      "todo_list",
+      "tool_call",
+      "tool_describe",
+      "tool_search",
+      "web_extract",
+      "web_search",
+      "write_file"
+    ]
+  },
+  "cli.gpt": {
+    "prompt_tokens": {
+      "context": 3828,
+      "stable": 1071,
+      "volatile": 307
+    },
+    "tool_tokens": 9503,
+    "tools": [
+      "clarify",
+      "delegate_task",
+      "execute_code",
+      "memory",
+      "memory_get",
+      "memory_search",
+      "patch",
+      "read_file",
+      "schedule_wakeup",
+      "search_files",
+      "skill_manage",
+      "skill_view",
+      "skills_list",
+      "terminal",
+      "todo_list",
+      "tool_call",
+      "tool_describe",
+      "tool_search",
+      "web_extract",
+      "web_search",
+      "write_file"
+    ]
+  },
+  "cli.hermes": {
+    "prompt_tokens": {
+      "context": 3828,
+      "stable": 1071,
+      "volatile": 314
+    },
+    "tool_tokens": 9348,
+    "tools": [
+      "clarify",
+      "delegate_task",
+      "execute_code",
+      "memory",
+      "memory_get",
+      "memory_search",
+      "patch",
+      "read_file",
+      "schedule_wakeup",
+      "search_files",
+      "skill_manage",
+      "skill_view",
+      "skills_list",
+      "terminal",
+      "todo_list",
+      "tool_call",
+      "tool_describe",
+      "tool_search",
+      "web_extract",
+      "web_search",
+      "write_file"
+    ]
+  },
+  "cron.claude": {
+    "prompt_tokens": {
+      "context": 3815,
+      "stable": 1071,
+      "volatile": 315
+    },
+    "tool_tokens": 9348,
+    "tools": [
+      "clarify",
+      "delegate_task",
+      "execute_code",
+      "memory",
+      "memory_get",
+      "memory_search",
+      "patch",
+      "read_file",
+      "schedule_wakeup",
+      "search_files",
+      "skill_manage",
+      "skill_view",
+      "skills_list",
+      "terminal",
+      "todo_list",
+      "tool_call",
+      "tool_describe",
+      "tool_search",
+      "web_extract",
+      "web_search",
+      "write_file"
+    ]
+  },
+  "desktop.claude": {
+    "prompt_tokens": {
+      "context": 4122,
+      "stable": 1071,
+      "volatile": 317
+    },
+    "tool_tokens": 10003,
+    "tools": [
+      "clarify",
+      "delegate_task",
+      "execute_code",
+      "memory",
+      "memory_get",
+      "memory_search",
+      "patch",
+      "react_to_message",
+      "read_file",
+      "schedule_wakeup",
+      "search_files",
+      "skill_manage",
+      "skill_view",
+      "skills_list",
+      "terminal",
+      "todo_list",
+      "tool_call",
+      "tool_describe",
+      "tool_search",
+      "web_extract",
+      "web_search",
+      "write_file"
+    ]
+  },
+  "discord.claude": {
+    "prompt_tokens": {
+      "context": 3848,
+      "stable": 1071,
+      "volatile": 317
+    },
+    "tool_tokens": 9348,
+    "tools": [
+      "clarify",
+      "delegate_task",
+      "execute_code",
+      "memory",
+      "memory_get",
+      "memory_search",
+      "patch",
+      "read_file",
+      "schedule_wakeup",
+      "search_files",
+      "skill_manage",
+      "skill_view",
+      "skills_list",
+      "terminal",
+      "todo_list",
+      "tool_call",
+      "tool_describe",
+      "tool_search",
+      "web_extract",
+      "web_search",
+      "write_file"
+    ]
+  },
+  "telegram.claude": {
+    "prompt_tokens": {
+      "context": 4424,
+      "stable": 1071,
+      "volatile": 317
+    },
+    "tool_tokens": 9467,
+    "tools": [
+      "clarify",
+      "delegate_task",
+      "execute_code",
+      "memory",
+      "memory_get",
+      "memory_search",
+      "patch",
+      "read_file",
+      "schedule_wakeup",
+      "search_files",
+      "skill_manage",
+      "skill_view",
+      "skills_list",
+      "terminal",
+      "todo_list",
+      "tool_call",
+      "tool_describe",
+      "tool_search",
+      "web_extract",
+      "web_search",
+      "write_file"
+    ]
+  }
+}
